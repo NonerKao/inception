@@ -1,0 +1,20 @@
+FROM qlkao/archrv:latest
+MAINTAINER Quey-Liang Kao <alankao@andestech.com>
+# Last Modified: 2017/11/22
+
+# editor
+RUN echo "Y" | pacman -S vim
+
+# ssh setting
+RUN echo "Y" | pacman -S openssh openssl
+RUN sed -i 's/.*StrictHostKeyChecking.*/StrictHostKeyChecking no/' /etc/ssh/ssh_config
+ADD sshd_config /etc/ssh/sshd_config
+RUN ssh-keygen -A
+
+# personal settings
+RUN rm -fr /root/.ssh /root/.bash* /root
+COPY person/.ssh /root/.ssh/
+COPY person/.vimrc /root/.vimrc
+COPY person/.gitconfig /root/.gitconfig
+COPY person/.bashrc /root/.bashrc
+COPY person/.bash_profile /root/.bash_profile

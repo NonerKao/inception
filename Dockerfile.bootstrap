@@ -1,0 +1,62 @@
+FROM base/archlinux
+MAINTAINER Quey-Liang Kao <alankao@andestech.com>
+# Last Modified: 2017/11/7
+
+# Archlinux Basics
+RUN rm -f /etc/pacman.d/mirrorlist
+ADD mirrorlist /etc/pacman.d/mirrorlist
+RUN pacman -Syy
+RUN echo "Y" | pacman -S archlinux-keyring
+RUN echo -en "Y\nY\nY\nY\n" | pacman -Syyu
+RUN pacman-db-upgrade
+RUN ln -s --force /usr/share/zoneinfo/Asia/Taipei /etc/localtime
+RUN echo -en "\nY\n" | pacman -S base-devel git bc dtc guile2.0 cpio vi
+
+# User Setting
+RUN useradd -m riscv
+ENV RISCV /home/riscv
+
+# Repos: toolchain and kernel
+RUN git clone https://github.com/riscv/riscv-tools.git /riscv-tools
+RUN cd /riscv-tools && git submodule update --init --recursive
+RUN git clone https://github.com/riscv/riscv-linux.git riscv-linux
+RUN cd /riscv-linux  
+
+# RISC-V spike simulator
+WORKDIR /riscv-tools
+RUN ./build-spike-only.sh
+
+# RISC-V baremetel toolchain
+WORKDIR /riscv-tools/riscv-gnu-toolchain
+RUN mkdir build-elf
+WORKDIR /riscv-tools/riscv-gnu-toolchain/build-elf
+RUN ../configure --prefix=$RISCV --with-guile=guile-2.0
+RUN make -j4 && make install
+
+# RISC-V linux toolchain
+WORKDIR /riscv-tools/riscv-gnu-toolchain
+RUN mkdir build-linux
+WORKDIR /riscv-tools/riscv-gnu-toolchain/build-linux
+RUN ../configure --prefix=$RISCV --with-guile=guile-2.0
+RUN make -j4 linux && make install
+
+# Root File System
+WORKDIR /
+RUN cp -r /home/riscv/sysroot /home/riscv/rootfs
+WORKDIR /home/riscv/rootfs
+RUN mkdir bin dev tmp proc sys
+ADD inittab /home/riscv/rootfs/etc/inittab
+RUN ln -s ../bin/busybox sbin/init
+RUN ln -s bin/busybox linuxrc
+RUN ln -s sbin/init init
+RUN mknod dev/console c 5 1
+RUN mknod dev/null c 1 3
+
+# Busybox
+WORKDIR /
+RUN curl -L https://busybox.net/downloads/busybox-1.27.2.tar.bz2 > busybox.tar.bz2
+RUN tar xvjf busybox.tar.bz2
+WORKDIR /busybox-1.27.2
+ADD busybox.config /busybox-1.27.2/.config
+RUN make -j4 && make install
+

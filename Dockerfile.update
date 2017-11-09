@@ -1,0 +1,62 @@
+FROM qlkao/archrv:latest
+MAINTAINER Quey-Liang Kao <alankao@andestech.com>
+# Last Modified: 2017/11/19
+
+# update Arch database
+RUN echo "Y" | pacman -Syu
+
+# download freedom-u-sdk
+WORKDIR /
+RUN git clone https://github.com/sifive/freedom-u-sdk.git || true
+WORKDIR /freedom-u-sdk
+RUN git pull
+
+# update riscv-gnu-toolchain
+WORKDIR /riscv-tools/riscv-gnu-toolchain
+RUN git fetch && git reset --hard $(pushd /freedom-u-sdk 2>&1 >/dev/null && git submodule status | grep gnu | sed -e "s/-//" | awk '{print $1}' && popd 2>&1 >/dev/null)
+RUN git submodule update --recursive
+
+# update riscv-fesvr
+WORKDIR /riscv-tools/riscv-fesvr
+RUN git fetch
+RUN git reset --hard $(pushd /freedom-u-sdk 2>&1 >/dev/null && git submodule status | grep fesvr | sed -e "s/-//" | awk '{print $1}' && popd 2>&1 >/dev/null)
+
+# update riscv-isa-sim
+WORKDIR /riscv-tools/riscv-isa-sim
+RUN git fetch && git reset --hard $(pushd /freedom-u-sdk 2>&1 >/dev/null && git submodule status | grep isa | sed -e "s/-//" | awk '{print $1}' && popd 2>&1 >/dev/null)
+
+# update linux
+WORKDIR /riscv-linux
+RUN git fetch && git reset --hard $(pushd /freedom-u-sdk 2>&1 >/dev/null && git submodule status | grep linux | sed -e "s/-//" | awk '{print $1}' && popd 2>&1 >/dev/null)
+
+# update bbl
+WORKDIR /riscv-tools/riscv-pk
+RUN git fetch && git reset --hard $(pushd /freedom-u-sdk 2>&1 >/dev/null && git submodule status | grep pk | sed -e "s/-//" | awk '{print $1}' && popd 2>&1 >/dev/null)
+
+# rebuild simulator
+WORKDIR /riscv-tools
+RUN ./build-spike-only.sh
+
+# rebuild toolchain
+WORKDIR /riscv-tools/riscv-gnu-toolchain/build-elf
+RUN make -j4 && make install
+WORKDIR /riscv-tools/riscv-gnu-toolchain/build-linux
+RUN make -j4 linux && make install
+
+# rebuild rootfs
+RUN cp -r /home/riscv/sysroot/* /home/riscv/rootfs
+
+# rebuild linux
+WORKDIR /riscv-linux
+RUN rm -f /riscv-linux/initramfs.txt 
+ADD initramfs.txt /riscv-linux/initramfs.txt
+RUN rm -f /riscv-linux/.config
+ADD linux.config /riscv-linux/.config
+RUN make -j4 ARCH=riscv CROSS_COMPILE=/home/riscv/bin/riscv64-unknown-linux-gnu- 
+
+# rebuild bbl
+WORKDIR /riscv-tools/riscv-pk/build
+RUN ../configure PATH=/home/riscv/bin/:$PATH --host=riscv64-unknown-linux-gnu --with-payload=/riscv-linux/vmlinux --prefix=/home/riscv
+RUN sed -i Makefile -e "s#^CFLAGS.*#& -g#"
+RUN make clean && PATH=/home/riscv/bin/:$PATH make -j4 && make install
+

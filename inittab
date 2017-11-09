@@ -1,0 +1,6 @@
+::sysinit:/bin/busybox mount -t proc proc /proc
+::sysinit:/bin/busybox mount -t tmpfs tmpfs /tmp
+::sysinit:/bin/busybox --install -s
+::shutdown:/bin/umount -a -r
+::shutdown:/sbin/swapoff -a
+/dev/console::sysinit:-/bin/ash
