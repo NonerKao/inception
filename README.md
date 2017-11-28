@@ -39,7 +39,7 @@ Once you have a ready image, you can run this command which launches **spike** t
 ```
 $ make run
 ```
-You may **assume** that this command start a **RISC-V/Linux Virtual Machine**.  You can ssh it with the address you set in the variable `IPADDR` in `Makefile`.  Also, you can have other connections through new terminals to this VM.  Once you have done some changes to the environment, you can apply `make commit` to save the status; or `make off` to turn off the VM without saving any changes.
+You may **assume** that this command start a **RISC-V/Linux Virtual Machine**.  Do `make ssh` to have other connections to the VM in new terminals.  Once you have done some changes to the environment, you can apply `make commit` to save the status; or `make off` to turn off the VM without saving any changes.
 
 In this VM, you have a set of toolchains in `/home/riscv/bin`, and related source trees in `/` directory.
 

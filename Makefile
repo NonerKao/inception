@@ -29,6 +29,9 @@ run:
 	sleep 1
 	ssh root@$(IPADDR)
 
+ssh:
+	ssh root@$(IPADDR)
+
 commit:
 	ssh root@$(IPADDR) make -C / clean
 	docker commit $(shell docker ps -aq) $(IMAGE):$(TAG)
@@ -38,3 +41,9 @@ off:
 	docker rm --force $(shell docker ps -aq) 2>&1 >/dev/null
 	docker network remove ITIRONMAN 2>&1 >/dev/null
 	@echo "The container is removed."
+
+# For the use in container
+clean:
+	make -C /riscv-linux clean
+	make -C /riscv-tools/riscv-pk/build clean
+	rm -fr /riscv-tools/riscv-gnu-toolchain/build*

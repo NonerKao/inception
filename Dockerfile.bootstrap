@@ -60,3 +60,5 @@ WORKDIR /busybox-1.27.2
 ADD busybox.config /busybox-1.27.2/.config
 RUN make -j4 && make install
 
+# Global Makefile
+ADD Makefile /
